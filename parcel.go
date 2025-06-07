@@ -44,9 +44,8 @@ func (s ParcelStore) Get(number int) (Parcel, error) {
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return Parcel{}, err
-		} else {
-			return p, fmt.Errorf("ошибка чтения: %v", err)
 		}
+		return Parcel{}, fmt.Errorf("reading error: %w", err)
 	}
 	return p, nil
 }
@@ -58,19 +57,15 @@ func (s ParcelStore) GetByClient(client int) ([]Parcel, error) {
 	var res []Parcel
 	rows, err := s.db.Query("SELECT number, client, status, address, created_at FROM parcel WHERE client = :client",
 		sql.Named("client", client))
-	if err == sql.ErrNoRows {
-		return res, fmt.Errorf("в базе данных нет строки: %v", err)
-	}
 	if err != nil {
-		return res, fmt.Errorf("ошибка чтения: %v", err)
+		return nil, fmt.Errorf("reading error: %w", err)
 	}
 	defer rows.Close()
 	for rows.Next() {
 		p := Parcel{}
-
 		err = rows.Scan(&p.Number, &p.Client, &p.Status, &p.Address, &p.CreatedAt)
 		if err != nil {
-			return res, fmt.Errorf("ошибка чтения: %v", err)
+			return nil, fmt.Errorf("reading error: %w", err)
 		}
 		res = append(res, p)
 	}
@@ -82,11 +77,11 @@ func (s ParcelStore) SetStatus(number int, status string) error {
 	_, err := s.db.Exec("UPDATE parcel SET status = :status WHERE number = :number",
 		sql.Named("number", number),
 		sql.Named("status", status))
-	if err == sql.ErrNoRows {
-		return fmt.Errorf("в базе данных нет строки: %v", err)
-	}
 	if err != nil {
-		return fmt.Errorf("ошибка чтения: %v", err)
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("sql.ErrNoRows: %w", err)
+		}
+		return fmt.Errorf("reading error: %w", err)
 	}
 	return nil
 }
@@ -95,25 +90,14 @@ func (s ParcelStore) SetAddress(number int, address string) error {
 	// реализуйте обновление адреса в таблице parcel
 	// менять адрес можно только если значение статуса registered
 
-	var status string
-	row := s.db.QueryRow("SELECT status FROM parcel WHERE number = :number",
-		sql.Named("number", number))
-	err := row.Scan(&status)
-	if err != nil {
-		return fmt.Errorf("ошибка чтения: %v", err)
-	}
-	if status != ParcelStatusRegistered {
-		return fmt.Errorf("статус посылки [%s], для изменения адреса, статус должен быть [%s]", status, ParcelStatusRegistered)
-	}
-
-	_, err = s.db.Exec("UPDATE parcel SET address = :address WHERE number = :number",
+	_, err := s.db.Exec("UPDATE parcel SET address = :address WHERE number = :number AND status = 'registered'",
 		sql.Named("number", number),
 		sql.Named("address", address))
-	if err == sql.ErrNoRows {
-		return fmt.Errorf("в базе данных нет строки: %v", err)
-	}
 	if err != nil {
-		return fmt.Errorf("ошибка чтения: %v", err)
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("sql.ErrNoRows: %w", err)
+		}
+		return fmt.Errorf("reading error: %w", err)
 	}
 	return nil
 }
@@ -122,44 +106,12 @@ func (s ParcelStore) Delete(number int) error {
 	// реализуйте удаление строки из таблицы parcel
 	// удалять строку можно только если значение статуса registered
 
-	var status string
-	row := s.db.QueryRow("SELECT status FROM parcel WHERE number = :number",
-		sql.Named("number", number))
-	err := row.Scan(&status)
-	if err == sql.ErrNoRows {
-		return fmt.Errorf("cтрока не найдена: %s", err)
-	}
+	_, err := s.db.Exec("DELETE FROM parcel WHERE number = :number AND status = 'registered'", sql.Named("number", number))
 	if err != nil {
-		return fmt.Errorf("Delete row.Scan ошибка чтения: %v", err)
-	}
-	if status != ParcelStatusRegistered {
-		return fmt.Errorf("статус посылки [%s], для удаления, статус должен быть [%s]", status, ParcelStatusRegistered)
-	}
-
-	_, err = s.db.Exec("DELETE FROM parcel WHERE number = :number", sql.Named("number", number))
-	if err == sql.ErrNoRows {
-		return fmt.Errorf("cтрока не найдена: %s", err)
-	}
-	return nil
-}
-func (s ParcelStore) MasterDelete(number int) error {
-	// реализуйте удаление строки из таблицы parcel не зависимо от статуса
-	// удалять строку можно только если значение статуса registered
-
-	var status string
-	row := s.db.QueryRow("SELECT status FROM parcel WHERE number = :number",
-		sql.Named("number", number))
-	err := row.Scan(&status)
-	if err == sql.ErrNoRows {
-		return fmt.Errorf("cтрока не найдена: %s", err)
-	}
-	if err != nil {
-		return fmt.Errorf("Delete row.Scan ошибка чтения: %v", err)
-	}
-
-	_, err = s.db.Exec("DELETE FROM parcel WHERE number = :number", sql.Named("number", number))
-	if err == sql.ErrNoRows {
-		return fmt.Errorf("cтрока не найдена: %s", err)
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("sql.ErrNoRows: %s", err)
+		}
+		return err
 	}
 	return nil
 }
