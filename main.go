@@ -101,6 +101,7 @@ func main() {
 	db, err := sql.Open("sqlite", "tracker.db")
 	if err != nil {
 		fmt.Printf("ошибка подключения к базе данных: %v", err)
+		return
 	}
 	defer db.Close()
 	store := NewParcelStore(db)

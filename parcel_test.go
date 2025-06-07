@@ -67,11 +67,10 @@ func TestAddGetDelete(t *testing.T) {
 	err = store.Delete(parcel.Number)
 	require.NoError(t, err, "Delete ошибка != nil")
 	err = store.Delete(parcel.Number)
-	assert.Equal(t, err, fmt.Errorf("Строка не найдена"))
+	assert.Equal(t, err, fmt.Errorf("cтрока не найдена: sql: no rows in result set"))
 	// удоляет добавленную строку из таблицы
 	_, err = store.Get(id)
 	require.EqualError(t, err, "sql: no rows in result set")
-
 }
 
 // TestSetAddress проверяет обновление адреса
@@ -83,7 +82,6 @@ func TestSetAddress(t *testing.T) {
 		fmt.Printf("ошибка подключения к базе данных: %v", err)
 	}
 	defer db.Close()
-	//db.Exec("DELETE FROM parcel")
 	// add
 	// добавьте новую посылку в БД, убедитесь в отсутствии ошибки и наличии идентификатора
 	store := NewParcelStore(db)
@@ -131,7 +129,7 @@ func TestSetStatus(t *testing.T) {
 	// check
 	// получите добавленную посылку и убедитесь, что статус обновился
 	parcel, err = store.Get(id)
-	assert.NoError(t, err, "Get ошибка != nil", err)
+	require.NoError(t, err, "Get ошибка != nil", err)
 	assert.Equal(t, parcel.Status, ParcelStatusSent)
 	err = store.MasterDelete(id)
 	require.NoError(t, err)
@@ -148,7 +146,6 @@ func TestGetByClient(t *testing.T) {
 	defer db.Close()
 	store := NewParcelStore(db)
 
-	//db.Exec("DELETE FROM parcel")
 	parcels := []Parcel{
 		getTestParcel(),
 		getTestParcel(),
@@ -179,8 +176,8 @@ func TestGetByClient(t *testing.T) {
 
 	// get by client
 	storedParcels, err := store.GetByClient(client) // получите список посылок по идентификатору клиента, сохранённого в переменной client
-	assert.NoError(t, err, "GetByClient ошибка != nil", err)
-	assert.Equal(t, len(storedParcels), 3)
+	require.NoError(t, err, "GetByClient ошибка != nil", err)
+	assert.Len(t, storedParcels, 3, "количество полученных посылок не совпадает с количеством добавленных")
 	// убедитесь в отсутствии ошибки
 	// убедитесь, что количество полученных посылок совпадает с количеством добавленных
 
@@ -189,11 +186,6 @@ func TestGetByClient(t *testing.T) {
 		// в parcelMap лежат добавленные посылки, ключ - идентификатор посылки, значение - сама посылка
 		// убедитесь, что все посылки из storedParcels есть в parcelMap
 		// убедитесь, что значения полей полученных посылок заполнены верно
-		assert.Equal(t, parcel.Address, parcelMap[parcel.Number].Address)
-		assert.Equal(t, parcel.Client, parcelMap[parcel.Number].Client)
-		assert.Equal(t, parcel.CreatedAt, parcelMap[parcel.Number].CreatedAt)
-		assert.Equal(t, parcel.Status, parcelMap[parcel.Number].Status)
-		assert.Equal(t, parcel.Number, parcelMap[parcel.Number].Number)
-
+		assert.Equal(t, parcel, parcelMap[parcel.Number])
 	}
 }
