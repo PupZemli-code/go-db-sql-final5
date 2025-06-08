@@ -35,10 +35,8 @@ func getTestParcel() Parcel {
 func TestAddGetDelete(t *testing.T) {
 	// prepare
 	db, err := sql.Open("sqlite", "tracker.db")
-	if err != nil {
-		err = fmt.Errorf("database connection error: %w", err)
-		fmt.Println(err)
-	}
+	require.NoErrorf(t, err, "database connection error: %w", err)
+
 	defer db.Close()
 	//db.Exec("DELETE FROM parcel")
 
@@ -48,7 +46,7 @@ func TestAddGetDelete(t *testing.T) {
 	// add
 	// добавьте новую посылку в БД, убедитесь в отсутствии ошибки и наличии идентификатора
 	id, err := store.Add(parcel)
-	assert.NoError(t, err, fmt.Errorf("database connection error: %w", err))
+	require.NoError(t, err, fmt.Errorf("database connection error: %w", err))
 	assert.NotEmpty(t, id)
 	parcel.Number = id
 	// get
@@ -87,7 +85,7 @@ func TestSetAddress(t *testing.T) {
 	store := NewParcelStore(db)
 	parcel := getTestParcel()
 	id, err := store.Add(parcel)
-	assert.NoError(t, err, "fanc Add err != nil", err)
+	require.NoError(t, err, "fanc Add err != nil", err)
 	assert.NotEmpty(t, id, "the [ID] is missing")
 	// set address
 	// обновите адрес, убедитесь в отсутствии ошибки
@@ -97,11 +95,11 @@ func TestSetAddress(t *testing.T) {
 	// check
 	// получите добавленную посылку и убедитесь, что адрес обновился
 	parcel, err = store.Get(id)
-	assert.NoError(t, err, "fanc Get err != nil", err)
+	require.NoError(t, err, "fanc Get err != nil", err)
 	assert.Equal(t, newAddress, parcel.Address)
 
 	err = store.Delete(id)
-	assert.NoError(t, err, "fanc Delete err != nil", err)
+	require.NoError(t, err, "fanc Delete err != nil", err)
 }
 
 // TestSetStatus проверяет обновление статуса
@@ -120,13 +118,13 @@ func TestSetStatus(t *testing.T) {
 	store := NewParcelStore(db)
 	parcel := getTestParcel()
 	id, err := store.Add(parcel)
-	assert.NoError(t, err, "fanc Add err != nil", err)
+	require.NoError(t, err, "fanc Add err != nil", err)
 	assert.NotEmpty(t, id, "the [ID] is missing")
 
 	// set status
 	// обновите статус, убедитесь в отсутствии ошибки
 	err = store.SetStatus(id, ParcelStatusSent)
-	assert.NoError(t, err, "fanc SetStatus err != nil", err)
+	require.NoError(t, err, "fanc SetStatus err != nil", err)
 	// check
 	// получите добавленную посылку и убедитесь, что статус обновился
 	parcel, err = store.Get(id)
@@ -164,7 +162,7 @@ func TestGetByClient(t *testing.T) {
 		// добавьте новую посылку в БД, убедитесь в отсутствии ошибки и наличии идентификатора
 		parcel := parcels[i]
 		id, err := store.Add(parcel)
-		assert.NoError(t, err, "fanc Add err != nil", err)
+		require.NoError(t, err, "fanc Add err != nil", err)
 		assert.NotEmpty(t, id, "the [ID] is missing")
 
 		// обновляем идентификатор добавленной у посылки
